@@ -28,8 +28,8 @@
 
 1. **下载项目**
    ```bash
-   git clone https://github.com/yourusername/cointools.git
-   cd cointools
+   git clone https://github.com/xxxtnco/cointools-main.git
+   cd cointools-main
    ```
 
 2. **加载扩展**
