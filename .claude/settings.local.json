@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/mask/Desktop/bootdemo/cointools-main1/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

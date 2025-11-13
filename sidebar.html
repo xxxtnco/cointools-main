@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bybit 智能网格交易助手</title>
+  <link rel="stylesheet" href="sidebar.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h2><span>Bybit</span> 智能网格交易</h2>
+    </header>
+
+    <section class="status-panel card">
+        <div class="status-item" style="display: flex;align-items: center;gap: 10px;">
+            <label>当前价格 (<span id="current-symbol">NXPCUSDT</span>):</label>
+            <span id="current-price">等待更新</span>
+          </div>
+          <div style="display: flex;align-items: center;justify-content: space-between;">
+            <div class="status-item" style="display: flex;align-items: center;gap: 10px;">
+              <label>最后更新:</label>
+              <span id="last-updated">-</span>
+            </div>
+            <div class="status-item" style="display: flex;align-items: center;gap: 10px;">
+              <label>网格状态:</label>
+              <span id="grid-status" class="stopped">已停止</span>
+            </div>
+          </div>
+          <div class="status-item" style="display: flex;align-items: center;gap: 10px;">
+            <label>交易费率:</label>
+            <span id="fee-rate">等待查询...</span>
+          </div>
+    </section>
+
+    <nav class="tab-nav">
+      <div id="tabGridBtn" class="active">网格交易</div>
+      <div id="tabBrushBtn">速刷模式</div>
+      <div id="tabSetBtn">参数设置</div>
+      <div id="tabLogBtn">运行日志</div>
+    </nav>
+
+    <main class="tab-content-area card">
+
+        <div id="tabGrid" class="tab-content active">
+            <fieldset>
+                <legend>🎯 智能网格参数</legend>
+                <div class="form-group">
+                    <label for="grid-symbol">交易对:</label>
+                    <input type="text" id="grid-symbol" value="NXPCUSDT" placeholder="例如: BTCUSDT">
+                </div>
+                <div class="form-group">
+                    <label for="profit-percent">利润率 (%):</label>
+                    <input type="number" id="profit-percent" step="0.1" value="2.5" min="0.5" max="10">
+                    <span class="hint">每格买卖价差</span>
+                </div>
+                <div class="form-group">
+                    <label for="grid-count">网格数量:</label>
+                    <input type="number" id="grid-count" step="1" value="10" min="3" max="30">
+                    <span class="hint">挂单层数</span>
+                </div>
+                <div class="form-group">
+                    <label for="capital-percent">资金使用 (%):</label>
+                    <input type="number" id="capital-percent" step="1" value="100" min="10" max="100">
+                    <span class="hint">使用账户USDT的百分比</span>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>⚙️ 高级设置</legend>
+                <div class="form-group">
+                    <label for="rebalance-threshold">重置阈值 (%):</label>
+                    <input type="number" id="rebalance-threshold" step="1" value="15" min="5" max="50">
+                    <span class="hint">价格偏离触发</span>
+                </div>
+                <div class="form-group">
+                    <label for="check-interval">检查间隔 (秒):</label>
+                    <input type="number" id="check-interval" step="1" value="10" min="3" max="60">
+                </div>
+                <div class="form-group">
+                    <label for="auto-rebalance-enabled">自动重置:</label>
+                    <input type="checkbox" id="auto-rebalance-enabled" checked style="width: auto;">
+                    <span class="hint">价格超出阈值时自动调整网格</span>
+                </div>
+            </fieldset>
+
+            <fieldset style="border-color: #ff6b6b;">
+                <legend>🛡️ 止损设置</legend>
+                <div class="form-group">
+                    <label for="grid-stoploss-enabled">启用每格止损:</label>
+                    <input type="checkbox" id="grid-stoploss-enabled" checked style="width: auto;">
+                    <span class="hint">单个网格达到止损线时自动卖出</span>
+                </div>
+                <div class="form-group">
+                    <label for="grid-stoploss-percent">每格止损 (%):</label>
+                    <input type="number" id="grid-stoploss-percent" step="0.5" value="5" min="1" max="20">
+                    <span class="hint">亏损百分比，例如5%表示亏损5%时止损</span>
+                </div>
+                <div class="form-group">
+                    <label for="total-stoploss-enabled">启用整体止损:</label>
+                    <input type="checkbox" id="total-stoploss-enabled" checked style="width: auto;">
+                    <span class="hint">总亏损达到止损线时停止网格</span>
+                </div>
+                <div class="form-group">
+                    <label for="total-stoploss-usdt">整体止损 (USDT):</label>
+                    <input type="number" id="total-stoploss-usdt" step="1" value="10" min="1" max="1000">
+                    <span class="hint">总亏损金额，例如10表示亏损10 USDT时停止</span>
+                </div>
+                <div style="font-size: 0.85em; margin-top: 10px; padding: 8px; background: rgba(255,107,107,0.1); border-radius: 4px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <span>止损触发次数: <strong id="stoploss-trigger-count" style="color: #ff6b6b;">0</strong></span>
+                        <span>整体止损状态: <strong id="total-stoploss-status" style="color: #6b7280;">未触发</strong></span>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>📊 实时网格状态</legend>
+                <div style="font-size: 0.85em; margin-bottom: 10px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                        <span>中心价: <strong id="grid-center-price">-</strong></span>
+                        <span>上限: <strong id="current-upper-price">-</strong></span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <span>下限: <strong id="current-lower-price">-</strong></span>
+                        <span>重置次数: <strong id="rebalance-count">0</strong></span>
+                    </div>
+                </div>
+                <div style="font-size: 0.85em; margin-bottom: 10px; margin-top: 10px;">
+                    <span>每格USDT: <strong id="usdt-per-grid">0.00</strong></span> | 
+                    <span>价格间隔: <strong id="price-interval">0.00</strong></span>
+                </div>
+                <div class="table-container">
+                    <table id="grid-preview-table">
+                        <thead>
+                            <tr>
+                                <th>序号</th>
+                                <th>买入价</th>
+                                <th>卖出价</th>
+                                <th>利润率</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="grid-preview-table-body">
+                            <tr><td colspan="5" style="text-align:center;">请先计算网格</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>📈 交易统计</legend>
+                <div style="font-size: 0.85em;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                        <span>运行时间: <strong id="runtime">0秒</strong></span>
+                        <span>净利润: <strong id="net-profit" style="color: #6b7280;">0.00</strong> USDT</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                        <span>总交易量: <strong id="total-volume">0.00</strong> USDT</span>
+                        <span>手续费: <strong id="fees-cost">0.0000</strong> USDT</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                        <span>买入: <strong id="buy-volume">0.00</strong> USDT (<span id="buy-count">0</span>次)</span>
+                        <span>卖出: <strong id="sell-volume">0.00</strong> USDT (<span id="sell-count">0</span>次)</span>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset style="border-color: #ff6b6b;">
+                <legend>💼 持仓浮盈浮亏 <button id="refresh-balance-btn" class="btn btn-outline" style="font-size: 0.8em; padding: 2px 8px; margin-left: 10px;">🔄 刷新实际余额</button></legend>
+                <div style="font-size: 0.85em;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                        <span>持仓数量: <strong id="position-count">0</strong> 个</span>
+                        <span>总数量: <strong id="total-quantity">0.00</strong></span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                        <span>持仓成本: <strong id="position-cost">0.00</strong> USDT</span>
+                        <span>当前价值: <strong id="position-value">0.00</strong> USDT</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <span>浮盈浮亏: <strong id="unrealized-pnl" style="color: #6b7280;">0.00</strong> USDT</span>
+                        <span>盈亏比例: <strong id="unrealized-pnl-percent" style="color: #6b7280;">0.00</strong>%</span>
+                    </div>
+                </div>
+            </fieldset>
+
+            <div class="button-group">
+                <button id="calculate-grid-btn" class="btn btn-outline">计算/刷新网格</button>
+                <button id="start-grid-btn" class="btn btn-primary">启动网格</button>
+                <button id="stop-grid-btn" class="btn btn-danger" disabled>停止网格</button>
+                <button id="force-rebalance-btn" class="btn btn-info" disabled>手动重置网格</button>
+            </div>
+            <div class="button-group">
+                <button id="emergency-sell-btn" class="btn btn-danger" style="width: 100%;">🚨 一键清仓（限价单）</button>
+            </div>
+        </div>
+
+      <div id="tabBrush" class="tab-content">
+            <fieldset>
+                <legend>🚀 速刷模式配置</legend>
+                <div style="background: rgba(255,193,7,0.1); padding: 10px; border-radius: 4px; margin-bottom: 10px; font-size: 0.9em;">
+                    ⚠️ <strong>注意</strong>：速刷模式会快速消耗资金用于刷交易量，仅用于完成交易所任务。手续费亏损不可避免。
+                </div>
+
+                <div class="form-group">
+                    <label for="brush-symbol">交易对:</label>
+                    <input type="text" id="brush-symbol" value="NXPCUSDT" placeholder="例如: BTCUSDT">
+                </div>
+
+                <div class="form-group">
+                    <label for="brush-interval">刷单间隔 (秒):</label>
+                    <input type="number" id="brush-interval" step="1" value="6" min="3" max="60">
+                    <span class="hint">每次买卖循环的间隔时间</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="brush-capital-percent">使用资金 (%):</label>
+                    <input type="number" id="brush-capital-percent" step="1" value="100" min="10" max="100">
+                    <span class="hint">每次使用账户USDT的百分比</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="brush-price-offset">价格偏移 (%):</label>
+                    <input type="number" id="brush-price-offset" step="0.01" value="0.08" min="0.01" max="2">
+                    <span class="hint">💡 优化值0.08% - 平衡成交率和磨损</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="brush-maker-mode">启用Maker模式:</label>
+                    <input type="checkbox" id="brush-maker-mode" checked style="width: auto;">
+                    <span class="hint">✅ 低买高卖赚价差 + 低手续费 (需等待成交，推荐时间充足时使用)</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="brush-order-timeout">订单超时 (秒):</label>
+                    <input type="number" id="brush-order-timeout" step="5" value="45" min="20" max="600">
+                    <span class="hint">快速决策，45秒超时 + 自适应调整</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="brush-adaptive-mode">自适应价格调整:</label>
+                    <input type="checkbox" id="brush-adaptive-mode" checked style="width: auto;">
+                    <span class="hint">✅ 超时后自动缩小价格偏移，提高成交率</span>
+                </div>
+            </fieldset>
+
+            <fieldset style="border-color: #ff6b6b;">
+                <legend>🛡️ 安全设置</legend>
+                <div class="form-group">
+                    <label for="brush-max-loss">最大亏损 (USDT):</label>
+                    <input type="number" id="brush-max-loss" step="1" value="50" min="1" max="1000">
+                    <span class="hint">累计亏损达到此值自动停止</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="brush-max-volume">最大交易量 (USDT):</label>
+                    <input type="number" id="brush-max-volume" step="1000" value="100000" min="1000" max="10000000">
+                    <span class="hint">累计交易量达到此值自动停止</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="brush-stop-on-error">出错自动停止:</label>
+                    <input type="checkbox" id="brush-stop-on-error" checked style="width: auto;">
+                    <span class="hint">连续失败5次自动停止</span>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>📊 实时统计</legend>
+                <div style="font-size: 0.85em;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                        <span>运行时间: <strong id="brush-runtime">0秒</strong></span>
+                        <span>刷单次数: <strong id="brush-count">0</strong></span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                        <span>已刷交易量: <strong id="brush-volume">0.00</strong> USDT</span>
+                        <span>总手续费: <strong id="brush-fees">0.0000</strong> USDT</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <span>净亏损: <strong id="brush-loss" style="color: #ff6b6b;">0.00</strong> USDT</span>
+                        <span>状态: <strong id="brush-status" class="stopped">已停止</strong></span>
+                    </div>
+                </div>
+            </fieldset>
+
+            <div class="button-group">
+                <button id="start-brush-btn" class="btn btn-primary">🚀 启动速刷</button>
+                <button id="stop-brush-btn" class="btn btn-danger" disabled>⏹ 停止速刷</button>
+            </div>
+      </div>
+
+      <div id="tabSet" class="tab-content">
+        <fieldset>
+          <legend>API 配置</legend>
+          <div class="form-group">
+            <label for="api-key">API 密钥:</label>
+            <input type="text" id="api-key" value="" placeholder="请输入API Key">
+          </div>
+          <div class="form-group">
+            <label for="api-secret">API 私钥:</label>
+            <input type="password" id="api-secret" value="" placeholder="请输入API Secret">
+          </div>
+          <div class="form-group">
+            <label for="password">配置密码:</label>
+            <input type="password" id="password" value="" placeholder="用于加密存储API密钥">
+          </div>
+          <div class="button-group-inline stackable">
+            <button id="save-config-btn" class="btn btn-info">保存配置</button>
+            <button id="load-config-btn" class="btn btn-primary">加载配置</button>
+            <button id="get-fee-btn" class="btn btn-outline">查询费率</button>
+          </div>
+        </fieldset>
+         <fieldset>
+            <legend>其他</legend>
+             <div class="button-group-inline stackable">
+                <button id="toggle-btn" class="btn btn-outline">切换侧边栏</button>
+                <button id="test-communication-btn" class="btn btn-outline">测试通信</button>
+             </div>
+         </fieldset>
+      </div>
+
+      <div id="tabLog" class="tab-content">
+        <div class="log-section">
+            <h3>消息日志:</h3>
+            <ul id="message-list" class="log-list"></ul>
+        </div>
+      </div>
+    </main>
+
+  </div>
+  <script src="sidebar.js"></script>
+</body>
+</html>
